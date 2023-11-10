@@ -61,7 +61,15 @@
 		'other',
 		'bun'
 	]
-	const nativeTags = ['nativets', 'postgresql', 'mysql', 'graphql', 'snowflake', 'bigquery']
+	const nativeTags = [
+		'nativets',
+		'postgresql',
+		'mysql',
+		'graphql',
+		'snowflake',
+		'mssql',
+		'bigquery'
+	]
 
 	let newTag: string = ''
 	$: selected = nconfig?.dedicated_worker != undefined ? 'dedicated' : 'normal'
@@ -312,7 +320,13 @@
 					}}
 					bind:value={nconfig.dedicated_worker}
 				/>
-				<p class="text-2xs text-tertiary max-w-md mt-2"
+				<div class="py-2"
+					><Alert
+						type="info"
+						title="Script's runtime setting 'dedicated worker' must be toggled on as well"
+					/></div
+				>
+				<p class="text-2xs text-tertiary mt-2"
 					>Workers will get killed upon detecting this setting change. It is assumed they are in an
 					environment where the supervisor will restart them. Upon restart, they will pick the new
 					dedicated worker config.</p
@@ -395,9 +409,9 @@
 				drawer.openDrawer()
 			}}
 		>
-			<div class="flex flex-row gap-1 items-center"
-				>{config == undefined ? 'create' : 'edit'} config</div
-			>
+			<div class="flex flex-row gap-1 items-center">
+				{config == undefined ? 'create' : 'edit'} config
+			</div>
 		</Button>
 
 		{#if config}

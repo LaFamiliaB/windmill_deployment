@@ -7,7 +7,6 @@
 	import Tooltip from '$lib/components/Tooltip.svelte'
 	import { sendUserToast } from '$lib/toast'
 	import OAuthSetting from '$lib/components/OAuthSetting.svelte'
-	import { faPlus } from '@fortawesome/free-solid-svg-icons'
 	import { deepEqual } from 'fast-equals'
 	import OktaSetting from './OktaSetting.svelte'
 	import CloseButton from './common/CloseButton.svelte'
@@ -17,7 +16,7 @@
 	import { capitalize } from '$lib/utils'
 	import { enterpriseLicense } from '$lib/stores'
 	import CustomOauth from './CustomOauth.svelte'
-	import { AlertTriangle } from 'lucide-svelte'
+	import { AlertTriangle, Plus } from 'lucide-svelte'
 	import CustomSso from './CustomSso.svelte'
 
 	export let tab: string = 'Core'
@@ -151,6 +150,8 @@
 	}
 
 	let clientName = ''
+
+	let licenseKeyChanged = false
 </script>
 
 <div class="pb-8">
@@ -258,7 +259,7 @@
 									color="blue"
 									hover="yo"
 									size="sm"
-									endIcon={{ icon: faPlus }}
+									endIcon={{ icon: Plus }}
 									disabled={clientName == ''}
 									on:click={() => {
 										oauths[clientName] = { id: '', secret: '', login_config: {} }
@@ -329,7 +330,7 @@
 									color="blue"
 									hover="yo"
 									size="sm"
-									endIcon={{ icon: faPlus }}
+									endIcon={{ icon: Plus }}
 									disabled={(oauth_name == 'custom' && resourceName == '') ||
 										(oauth_name == 'custom' && !$enterpriseLicense)}
 									on:click={() => {
@@ -388,6 +389,9 @@
 														<textarea
 															rows="2"
 															placeholder={setting.placeholder}
+															on:keydown={() => {
+																licenseKeyChanged = true
+															}}
 															bind:value={values[setting.key]}
 														/>
 														<Button
@@ -407,6 +411,12 @@
 																>License key expires on {parseDate(values[setting.key])}</span
 															>
 														{/if}
+													{/if}
+													{#if licenseKeyChanged}
+														<div class="text-yellow-600"
+															>Refresh page after setting license key and saving to unlock all
+															features</div
+														>
 													{/if}
 												{:else if setting.fieldType == 'email'}
 													<input

@@ -484,6 +484,11 @@ if args["{name}"] is None:
 
     let module_dir_dot = dirs.replace("/", ".").replace("-", "_");
 
+    let last = if last.starts_with(|x: char| x.is_ascii_digit()) {
+        format!("_{}", last)
+    } else {
+        last
+    };
     Ok((
         import_loader,
         import_base64,
@@ -872,6 +877,8 @@ replace_nan = re.compile(r'\bNaN\b')
 sys.stdout.write('start\n')
 
 for line in sys.stdin:
+    if line == 'end\n':
+        break
     kwargs = json.loads(line, strict=False)
     args = {{}}
 {indented_transforms}

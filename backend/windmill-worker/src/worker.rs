@@ -90,7 +90,9 @@ use crate::{
 };
 
 #[cfg(feature = "enterprise")]
-use crate::{bigquery_executor::do_bigquery, snowflake_executor::do_snowflake};
+use crate::{
+    bigquery_executor::do_bigquery, mssql_executor::do_mssql, snowflake_executor::do_snowflake,
+};
 
 pub async fn create_token_for_owner_in_bg(
     db: &Pool<Postgres>,
@@ -990,10 +992,11 @@ pub async fn run_worker<R: rsmq_async::RsmqConnection + Send + Sync + Clone + 's
                     #[cfg(feature = "benchmark")]
                     let process_start = Instant::now();
 
+                    let is_dependency_job = matches!(jc.job.job_kind, JobKind::Dependencies);
                     handle_receive_completed_job(
                         jc,
                         base_internal_url2,
-                        db2,
+                        db2.clone(),
                         worker_dir2,
                         same_worker_tx2,
                         rsmq2,
@@ -1038,6 +1041,13 @@ pub async fn run_worker<R: rsmq_async::RsmqConnection + Send + Sync + Clone + 's
                     }
 
                     thread_count.fetch_sub(1, Ordering::SeqCst);
+                    if is_dependency_job && is_dedicated_worker {
+                        tracing::error!("Dedicated worker executed a dependency job, a new script has been deployed. Exiting expecting to be restarted.");
+                        sqlx::query!("UPDATE config SET config = config WHERE name = $1", format!("worker__{}", *WORKER_GROUP))
+                            .execute(&db2)
+                            .await
+                            .expect("update config to trigger restart of all dedicated workers at that config");
+                    }
                 });
             } else {
                 handle_receive_completed_job(
@@ -1060,12 +1070,6 @@ pub async fn run_worker<R: rsmq_async::RsmqConnection + Send + Sync + Clone + 's
             tokio::time::sleep(Duration::from_millis(50)).await;
         }
         tracing::info!("finished processing all completed jobs");
-
-        // if let Err(e) =
-        //     add_completed_job(&db2, &job, success, false, result, logs, rsmq2.clone()).await
-        // {
-        //     tracing::error!(worker = %worker_name2, "failed to add completed job: {}", e);
-        // }
     });
 
     let mut last_executed_job: Option<Instant> = None;
@@ -1123,7 +1127,7 @@ pub async fn run_worker<R: rsmq_async::RsmqConnection + Send + Sync + Clone + 's
                 .await
                 {
                     tracing::error!("failed to create token for dedicated worker: {:?}", e);
-                    killpill_tx.send(()).expect("send");
+                    killpill_tx.clone().send(()).expect("send");
                 };
 
                 let (content, lock, language, envs) = {
@@ -1462,6 +1466,7 @@ pub async fn run_worker<R: rsmq_async::RsmqConnection + Send + Sync + Clone + 's
                 {
                     if dedi_path.workspace_id == job.workspace_id
                         && Some(&dedi_path.path) == job.script_path.as_ref()
+                        && matches!(job.job_kind, JobKind::Script | JobKind::Preview)
                     {
                         #[cfg(feature = "benchmark")]
                         main_duration
@@ -2531,6 +2536,18 @@ async fn handle_code_execution_job(
         {
             return do_snowflake(job, &client, &inner_content, db).await;
         }
+    } else if language == Some(ScriptLang::Mssql) {
+        #[cfg(not(feature = "enterprise"))]
+        {
+            return Err(Error::ExecutionErr(
+                "Microsoft SQL server is only available with an enterprise license".to_string(),
+            ));
+        }
+
+        #[cfg(feature = "enterprise")]
+        {
+            return do_mssql(job, &client, &inner_content, db).await;
+        }
     } else if language == Some(ScriptLang::Graphql) {
         return do_graphql(job, &client, &inner_content, db).await;
     } else if language == Some(ScriptLang::Nativets) {
@@ -3343,6 +3360,7 @@ async fn capture_dependency_job(
         ScriptLang::Mysql => Ok("".to_owned()),
         ScriptLang::Bigquery => Ok("".to_owned()),
         ScriptLang::Snowflake => Ok("".to_owned()),
+        ScriptLang::Mssql => Ok("".to_owned()),
         ScriptLang::Graphql => Ok("".to_owned()),
         ScriptLang::Bash => Ok("".to_owned()),
         ScriptLang::Powershell => Ok("".to_owned()),

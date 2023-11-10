@@ -525,15 +525,17 @@ pub async fn reload_worker_config(
     tx: tokio::sync::broadcast::Sender<()>,
     kill_if_change: bool,
 ) {
-    let config = load_worker_config(&db).await;
+    let config = load_worker_config(&db, tx.clone()).await;
     if let Err(e) = config {
         tracing::error!("Error reloading worker config: {:?}", e)
     } else {
         let wc = WORKER_CONFIG.read().await;
         let config = config.unwrap();
-        if *wc != config {
+        if *wc != config || config.dedicated_worker.is_some() {
             if kill_if_change {
-                if (*wc).dedicated_worker != config.dedicated_worker {
+                if config.dedicated_worker.is_some()
+                    || (*wc).dedicated_worker != config.dedicated_worker
+                {
                     tracing::info!("Dedicated worker config changed, sending killpill. Expecting to be restarted by supervisor.");
                     let _ = tx.send(());
                 }

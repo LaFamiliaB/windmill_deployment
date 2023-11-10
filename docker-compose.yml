@@ -5,15 +5,16 @@ services:
     deploy:
       # To use an external database, set replicas to 0 and set DATABASE_URL to the external database url in the .env file
       replicas: 1
-    image: postgres:15
+    image: postgres:14
     restart: unless-stopped
     volumes:
       - db_data:/var/lib/postgresql/data
     expose:
-      - 5432
+      - 5433
     environment:
-      - POSTGRES_PASSWORD: sololett
-      - POSTGRES_DB: windmill
+      POSTGRES_PASSWORD: sololett
+      POSTGRES_DB: windmill
+      PGPORT: 5433
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s

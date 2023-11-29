@@ -10,11 +10,11 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     expose:
-      - 5432
+      - 5433
     environment:
       - POSTGRES_PASSWORD: sololett
       - POSTGRES_DB: windmill
-      # PGPORT: 5433
+      - PGPORT: 5433
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -28,7 +28,7 @@ services:
       replicas: 1
     restart: unless-stopped
     expose:
-      - 8000
+      - 8001
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - MODE=server
@@ -95,23 +95,6 @@ services:
     restart: unless-stopped
     expose:
       - 3002
-
-  caddy:
-    image: caddy:2.5.2-alpine
-    restart: unless-stopped
-
-    # Configure the mounted Caddyfile and the exposed ports or use another reverse proxy if needed
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      # - ./certs:/certs # Provide custom certificate files like cert.pem and key.pem to enable HTTPS - See the corresponding section in the Caffyfile
-    ports:
-      # To change the exposed port, simply change 80:80 to <desired_port>:80. No other changes needed
-      - 81:80
-      # - 443:443 # Uncomment to enable HTTPS handling by Caddy
-    environment:
-      - BASE_URL=":80"
-      # - BASE_URL=":443" # uncomment and comment line above to enable HTTPS via custom certificate and key files
-      # - BASE_URL=mydomain.com # Uncomment and comment line above to enable HTTPS handling by Caddy
 
 volumes:
   db_data: null

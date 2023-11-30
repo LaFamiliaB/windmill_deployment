@@ -28,7 +28,7 @@ services:
       replicas: 1
     restart: unless-stopped
     expose:
-      - 8001
+      - 8000
     environment:
       - DATABASE_URL=postgres://postgres:sololett@db/windmill?sslmode=disable
       - MODE=server

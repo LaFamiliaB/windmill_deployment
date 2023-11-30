@@ -10,11 +10,11 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     expose:
-      - 5433
+      - 5432
     environment:
       POSTGRES_PASSWORD: sololett
       POSTGRES_DB: windmill
-      PGPORT: 5433
+      # PGPORT: 5433
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -84,7 +84,7 @@ services:
     pull_policy: always
     restart: unless-stopped
     expose:
-      - 3001
+      - 3000
     volumes:
       - lsp_cache:/root/.cache
 

@@ -92,4 +92,6 @@ volumes:
   db_data: null
   worker_dependency_cache: null
   lsp_cache: null
+  docker_sock:
+    name: /var/run/docker.sock
   # external: true
